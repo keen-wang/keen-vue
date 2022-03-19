@@ -36,7 +36,8 @@ function trace(target: any, key: string | symbol) {
 
     // 将副作用函数收集到目标对象对应的属性下面的依赖集合 target.key.deps
     deps.add(activeEffect)
-    // TODO: 何时去掉这里的 ativeEffect 避免读取别的属性时把这个方法添加到依赖
+    // 将依赖集合对象添加到 activeEffect.deps
+    activeEffect.deps.push(deps)
 }
 /** 触发副作用函数 */
 function trigger(target: any, key: string | symbol) {
@@ -44,7 +45,8 @@ function trigger(target: any, key: string | symbol) {
     const depMap = bucket.get(target)
     if (!depMap) return
     const effects = depMap.get(key)
-    effects && effects.forEach(fn => fn())
+    const effectsToRun = new Set(effects)
+    effectsToRun.forEach(fn => fn())
 }
 
 /**用一个全局变量存被注册的副作用函数*/
@@ -63,10 +65,21 @@ export function registerEffect(fn: Function, label?: string) {
     // set() => effectFn() => 修改activeEffect指向effectFn => fn() => get() => 将key和当前activeEffect绑定
     const effectFn = () => {
         console.warn('[effectFn] activeEffect change:', effectFn.label);
+        cleanup(effectFn)
         activeEffect = effectFn;
         fn()
+
     }
     effectFn.label = label
+    // deps 用于存储该副作用函数关联的对象属性
+    effectFn.deps = [] as any[]
     effectFn()
+}
+/** 重置副作用的对象属性的关联 */
+function cleanup(effectFn: { deps: Set<Function>[] }) {
+    effectFn.deps.forEach(item => {
+        item.delete(effectFn as any)
+    })
+    effectFn.deps.length = 0
 }
 
