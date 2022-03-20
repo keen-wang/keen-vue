@@ -45,7 +45,13 @@ function trigger(target: any, key: string | symbol) {
     const depMap = bucket.get(target)
     if (!depMap) return
     const effects = depMap.get(key)
-    const effectsToRun = new Set(effects)
+    const effectsToRun: Set<Function> = new Set()
+    effects?.forEach(item=>{
+        //！！！ 组织副作用函数内触发trigger导致无限递归。
+        if(activeEffect !== item) {
+            effectsToRun.add(item)
+        }
+    })
     effectsToRun.forEach(fn => fn())
 }
 
@@ -68,13 +74,14 @@ export function registerEffect(fn: Function, label?: string) {
     // B方式: 在每次执行副作用函数时，都重新设置 activeEffect ，确保get的时候拿到的是正确的 activeEffect。
     // set() => effectFn() => 修改activeEffect指向effectFn => fn() => get() => 将key和当前activeEffect绑定
     const effectFn = () => {
-        console.warn('[effectFn] activeEffect change:', effectFn.label);
         cleanup(effectFn)
         activeEffect = effectFn;
+        console.warn('[effectFn] activeEffect change1:', activeEffect?.label);
         effectStack.push(effectFn)
         fn()
         effectStack.pop()
         activeEffect= effectStack[effectStack.length - 1]
+        console.warn('[effectFn] activeEffect change2:', activeEffect?.label);
 
     }
     effectFn.label = label
