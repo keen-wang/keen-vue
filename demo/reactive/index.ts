@@ -21,8 +21,8 @@ export function reactive<T extends object>(origin: T): T {
 }
 /** 追踪属性 */
 function trace(target: any, key: string | symbol) {
-    console.warn('[trace] Bind key and effect: ', key, activeEffect.label);
     if (!activeEffect) return
+    console.warn('[trace] Bind key and effect: ', key, activeEffect.label);
     let depsMap = bucket.get(target)
     if (!depsMap) {
         depsMap = new Map()
@@ -51,6 +51,10 @@ function trigger(target: any, key: string | symbol) {
 
 /**用一个全局变量存被注册的副作用函数*/
 let activeEffect: any | undefined
+/** 副作用函数栈
+ * 使用副作用函数栈存储和使用副作用函数，避免在嵌套的副作用函数中 get 获取到错误的副作用函数
+ */
+const effectStack: any[] = []
 /*注册副作用函数*/
 export function registerEffect(fn: Function, label?: string) {
     // A方式: 原本没有闭包的情况下，activeEffect 在读取变量时没有及时修改，导致出现 effect 挂在错误的 key 上
@@ -67,7 +71,10 @@ export function registerEffect(fn: Function, label?: string) {
         console.warn('[effectFn] activeEffect change:', effectFn.label);
         cleanup(effectFn)
         activeEffect = effectFn;
+        effectStack.push(effectFn)
         fn()
+        effectStack.pop()
+        activeEffect= effectStack[effectStack.length - 1]
 
     }
     effectFn.label = label
