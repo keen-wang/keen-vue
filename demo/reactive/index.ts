@@ -1,3 +1,14 @@
+interface EffectFuncOptions {
+    label?: string,
+    scheduler?: (fn: Function) => void
+}
+class EffectFunc extends Function {
+    constructor() {
+        super()
+    }
+    options?: EffectFuncOptions = {}
+    deps?: Set<Function>[]
+}
 
 /**
  *  存储副作用函数的集合： WeakMap 将闭包作用域中的对象强引用，避免影响垃圾回收。
@@ -22,7 +33,7 @@ export function reactive<T extends object>(origin: T): T {
 /** 追踪属性 */
 function trace(target: any, key: string | symbol) {
     if (!activeEffect) return
-    console.warn('[trace] Bind key and effect: ', key, activeEffect.options.label);
+    console.warn('[trace] Bind key and effect: ', key, activeEffect?.options?.label);
     let depsMap = bucket.get(target)
     if (!depsMap) {
         depsMap = new Map()
@@ -37,7 +48,11 @@ function trace(target: any, key: string | symbol) {
     // 将副作用函数收集到目标对象对应的属性下面的依赖集合 target.key.deps
     deps.add(activeEffect)
     // 将依赖集合对象添加到 activeEffect.deps
-    activeEffect.deps.push(deps)
+    if (!activeEffect.deps) {
+        activeEffect.deps = [deps]
+    } else {
+        activeEffect.deps.push(deps)
+    }
 }
 /** 触发副作用函数 */
 function trigger(target: any, key: string | symbol) {
@@ -63,13 +78,13 @@ function trigger(target: any, key: string | symbol) {
 }
 
 /**用一个全局变量存被注册的副作用函数*/
-let activeEffect: any | undefined
+let activeEffect: EffectFunc | undefined
 /** 副作用函数栈
  * 使用副作用函数栈存储和使用副作用函数，避免在嵌套的副作用函数中 get 获取到错误的副作用函数
  */
 const effectStack: any[] = []
 /*注册副作用函数*/
-export function registerEffect(fn: Function, options: { scheduler?: (fn: Function) => void, label?: string } = {}) {
+export function registerEffect(fn: Function, options: EffectFuncOptions = {}) {
     // A方式: 原本没有闭包的情况下，activeEffect 在读取变量时没有及时修改，导致出现 effect 挂在错误的 key 上
     //  set() => fn() => get() => 将key和当前activeEffect绑定，此时的activeEffect指向的可能是错的。
     /*
@@ -80,7 +95,7 @@ export function registerEffect(fn: Function, options: { scheduler?: (fn: Functio
 
     // B方式: 在每次执行副作用函数时，都重新设置 activeEffect ，确保get的时候拿到的是正确的 activeEffect。
     // set() => effectFn() => 修改activeEffect指向effectFn => fn() => get() => 将key和当前activeEffect绑定
-    const effectFn = () => {
+    const effectFn: EffectFunc = () => {
         cleanup(effectFn)
         activeEffect = effectFn;
         console.warn('[effectFn] activeEffect change1:', activeEffect?.options?.label);
@@ -96,10 +111,12 @@ export function registerEffect(fn: Function, options: { scheduler?: (fn: Functio
     effectFn()
 }
 /** 重置副作用的对象属性的关联 */
-function cleanup(effectFn: { deps: Set<Function>[] }) {
-    effectFn.deps.forEach(item => {
-        item.delete(effectFn as any)
-    })
-    effectFn.deps.length = 0
+function cleanup(effectFn: EffectFunc) {
+    if (effectFn.deps && effectFn.deps.length > 0) {
+        effectFn.deps.forEach(item => {
+            item.delete(effectFn as any)
+        })
+        effectFn.deps.length = 0
+    }
 }
 
