@@ -1,12 +1,13 @@
 interface EffectFuncOptions {
-    label?: string,
-    scheduler?: (fn: Function) => void
+    label: string,
+    scheduler?: (fn: Function) => void,
+    lazy?: boolean
 }
 class EffectFunc extends Function {
     constructor() {
         super()
     }
-    options?: EffectFuncOptions = {}
+    options?: EffectFuncOptions = { label: "" }
     deps?: Set<Function>[]
 }
 
@@ -84,7 +85,7 @@ let activeEffect: EffectFunc | undefined
  */
 const effectStack: any[] = []
 /*注册副作用函数*/
-export function registerEffect(fn: Function, options: EffectFuncOptions = {}) {
+export function registerEffect(fn: Function, options: EffectFuncOptions = { label: "" }): EffectFunc {
     // A方式: 原本没有闭包的情况下，activeEffect 在读取变量时没有及时修改，导致出现 effect 挂在错误的 key 上
     //  set() => fn() => get() => 将key和当前activeEffect绑定，此时的activeEffect指向的可能是错的。
     /*
@@ -100,15 +101,20 @@ export function registerEffect(fn: Function, options: EffectFuncOptions = {}) {
         activeEffect = effectFn;
         console.warn('[effectFn] activeEffect change1:', activeEffect?.options?.label);
         effectStack.push(effectFn)
-        fn()
+        const res = fn()
         effectStack.pop()
         activeEffect = effectStack[effectStack.length - 1]
         console.warn('[effectFn] activeEffect change2:', activeEffect?.options?.label);
+        return res
     }
     // deps 用于存储该副作用函数关联的对象属性
     effectFn.deps = [] as any[]
     effectFn.options = options
-    effectFn()
+    // 只有在非lazy的时候才执行副作用
+    if (!options.lazy) {
+        effectFn()
+    }
+    return effectFn
 }
 /** 重置副作用的对象属性的关联 */
 function cleanup(effectFn: EffectFunc) {
@@ -120,3 +126,39 @@ function cleanup(effectFn: EffectFunc) {
     }
 }
 
+/**
+ * 实现computed函数
+ * 只有当读取计算属性的值时才会去执行副作用函数
+ */
+export function computed(getter: EffectFunc): { value: any } {
+    //value 用于缓存上一次取到的值
+    let value: any
+    // dirty 标识是否需要重新计算属性
+    let dirty = true
+    // 计算副作用函数执行次数
+    let count = 0
+    const effectFn = registerEffect(getter, {
+        lazy: true,
+        label: "computedEffect",
+        scheduler() {
+            // 每次触发副作用函数时不执行副作用函数，将dirty标明被修改，下次获取值时执行副作用函数
+            dirty = true
+            // 将obj设为响应式： 属性值发生改变时触发trigger
+            trigger(obj, "value")
+        }
+    })
+    const obj = {
+        get value() {
+            if (dirty) {
+                value = effectFn()
+                console.warn('[computed] effectFn work!', count++);
+                // dirty 设置false, 利用缓存减少副作用函数执行次数
+                dirty = false
+            }
+            // 将obj设为响应式： 属性值被读取时触发trace
+            trace(obj, 'value')
+            return value;
+        }
+    }
+    return obj
+}
