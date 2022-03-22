@@ -1,27 +1,44 @@
 import { trigger, EffectFunc, registerEffect, trace } from './index'
+interface WatchOptions {
+    immediate?: boolean,
+    flush?: "pre" | "post" | "sync" // 立即执行时机
+}
 /**
  * watch
  * @param source 响应式数据
  * @param callback 回调
  */
-export function watch(source: any, callback: Function) {
+export function watch(source: any, callback: Function, options?: WatchOptions) {
     let getter = source
     if (typeof getter !== 'function') {
         getter = () => traverse(source)
     }
     let newValue: any, oldValue: any
+    const job = () => {
+        // 执行副作用函数获取新值
+        newValue = effectFn()
+        // 对象变化时触发回调
+        callback(newValue, oldValue)
+        oldValue = newValue
+    }
     const effectFn = registerEffect(() => getter(), {
-        scheduler() {
-            // 执行副作用函数获取新值
-            newValue = effectFn()
-            // 对象变化时触发回调
-            callback(newValue, oldValue)
-            oldValue = newValue
+        scheduler: ()=>{
+            if(options?.flush === 'post') {
+                const p = Promise.resolve()
+                p.then(job)
+            } else {
+                job()
+            }
         },
         label: "watchEffect",
         lazy: true
     })
-    oldValue = effectFn()
+    // 当immediate为true,立即执行回调，将初值回调出去
+    if (options?.immediate) {
+        job()
+    } else {
+        oldValue = effectFn()
+    }
 }
 // 递归读取对象，跟踪整个对象的变化
 function traverse(value: any, seen = new Set()): any {
