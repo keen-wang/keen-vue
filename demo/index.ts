@@ -42,13 +42,41 @@ registerEffect(() => {
 //     label: "textAndTitleEffect"
 // })
 
-watch(() => data.text, (a: any, b: any) => {
-    console.log("watch data change", a, b)
+// mockHttpReq 模拟http请求,第一次耗时8s,第二次耗时6s
+const mockHttpReq = (() => {
+    let id = 1
+    let costTime = 10
+    return (): Promise<string> => {
+        return new Promise(resolve => {
+            let myCost = costTime -= 2;
+            let myID = id++;
+            console.log("start requestId: " + myID)
+            setTimeout(() => {
+                resolve(`respId: ${myID}, costTime: ${myCost}s`)
+            }, myCost * 1000);
+        })
+    }
+})()
+
+watch(() => data.text, async (a: any, b: any, onInvalidate: Function) => {
+    console.log('watch change', a, b);
+    let expired = false
+    onInvalidate(() => {
+        expired = true
+    })
+    const result = await mockHttpReq()
+    console.log('resp: ', result);
+    if (!expired) {
+        // 利用 onInvalidate 确保result是最后一个请求的结果
+        document.getElementById("watch")!.innerText = result
+    }
 })
+
 
 setTimeout(() => {
     console.log('one second later',);
-    data.text = 20000
     data.title = "Title"
+    data.text = 20000
+    data.text = 100
     data.text = 100
 }, 1000);

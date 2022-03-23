@@ -13,12 +13,23 @@ export function watch(source: any, callback: Function, options?: WatchOptions) {
     if (typeof getter !== 'function') {
         getter = () => traverse(source)
     }
+    // 在watch函数内添加cleanup保存上一次过期回调
+    let cleanup: Function | undefined = undefined
+    function onInvalidate(fn: Function) {
+        cleanup = fn
+    }
+
     let newValue: any, oldValue: any
     const job = () => {
         // 执行副作用函数获取新值
         newValue = effectFn()
+        // 触发上一个函数的过期回调
+        if(cleanup) {
+            cleanup()
+            cleanup = undefined
+        }
         // 对象变化时触发回调
-        callback(newValue, oldValue)
+        callback(newValue, oldValue, onInvalidate)
         oldValue = newValue
     }
     const effectFn = registerEffect(() => getter(), {
