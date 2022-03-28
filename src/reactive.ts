@@ -12,6 +12,12 @@ export class EffectFunc extends Function {
     deps?: Set<Function>[]
 }
 
+export enum TriggerType {
+    Add = 0,
+    Delete,
+    Set
+}
+
 /**
  *  存储副作用函数的集合： WeakMap 将闭包作用域中的对象强引用，避免影响垃圾回收。
  */
@@ -24,8 +30,8 @@ const bucket: WeakMap<object, Map<string | Symbol, Set<Function>>> = new WeakMap
  * 2. 判断对象或原型上是否存在给定的 key : key in obj
  * 3. for in 遍历对象的 key
  */
+let _iterateKey = Symbol()
 export function reactive<T extends object>(origin: T): T {
-    // let _iterateKey = Symbol()
     return new Proxy(origin, {
         get(target, key, receiver) {
             track(target, key)
@@ -33,20 +39,30 @@ export function reactive<T extends object>(origin: T): T {
             return Reflect.get(target, key, receiver)
         },
         set(target, key, value, receiver) {
+            const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerType.Set : TriggerType.Add
             //  设置新值
             Reflect.set(target, key, value, receiver)
             // target[key] = value
-            trigger(target, key)
+            trigger(target, key, type)
             return true
         },
         has(target, key) {
             track(target, key)
             return Reflect.has(target, key)
+        },
+        ownKeys(target) {
+            track(target, _iterateKey)
+            return Reflect.ownKeys(target)
+        },
+        deleteProperty(target, key) {
+            // 检查是否拥有属性
+            const hasKey = Object.prototype.hasOwnProperty.call(target,key)
+            const result = Reflect.deleteProperty(target, key)
+            if (hasKey && result) {
+                trigger(target, _iterateKey, TriggerType.Delete)
+            }
+            return result
         }
-        // ownKeys(target) {
-        //     track(target, _iterateKey)
-        //     return Reflect.ownKeys(target)
-        // }
     })
 }
 /** 追踪属性 */
@@ -74,7 +90,7 @@ export function track(target: any, key: string | symbol) {
     }
 }
 /** 触发副作用函数 */
-export function trigger(target: any, key: string | symbol) {
+export function trigger(target: any, key: string | symbol, type: TriggerType = TriggerType.Set) {
     // 获取副作用函数
     const depMap = bucket.get(target)
     if (!depMap) return
@@ -86,13 +102,15 @@ export function trigger(target: any, key: string | symbol) {
             effectsToRun.add(item)
         }
     })
-    // const iterateEffects = depMap.get(_iterateKey)
-    // iterateEffects && iterateEffects.forEach(item => {
-    //     //！！！ 组织副作用函数内触发trigger导致无限递归。
-    //     if (activeEffect !== item) {
-    //         effectsToRun.add(item)
-    //     }
-    // })
+    if (type === TriggerType.Add || type === TriggerType.Delete) {
+        const iterateEffects = depMap.get(_iterateKey)
+        iterateEffects && iterateEffects.forEach(item => {
+            //！！！ 组织副作用函数内触发trigger导致无限递归。
+            if (activeEffect !== item) {
+                effectsToRun.add(item)
+            }
+        })
+    }
     effectsToRun.forEach((fn: any) => {
         if (fn.options?.scheduler) {
             // 可通过 scheduler 自行决定副作用函数执行的次数和时机
