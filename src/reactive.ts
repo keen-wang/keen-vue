@@ -19,14 +19,15 @@ const bucket: WeakMap<object, Map<string | Symbol, Set<Function>>> = new WeakMap
 /** 数据响应式 */
 export function reactive<T extends object>(origin: T): T {
     return new Proxy(origin, {
-        get(target, key) {
+        get(target, key, receiver) {
             trace(target, key)
-            // @ts-ignore 
-            return target[key]
+            // 通过 receiver 来读取属性值 getter 中的 this 也变为 receiver 即代理对象。
+            return Reflect.get(target, key, receiver)
         },
-        set(target, key, value) {
-            // @ts-ignore 设置新值
-            target[key] = value
+        set(target, key, value, receiver) {
+            //  设置新值
+            Reflect.set(target, key, value, receiver)
+            // target[key] = value
             trigger(target, key)
             return true
         }
