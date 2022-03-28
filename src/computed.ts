@@ -1,4 +1,4 @@
-import {trigger, EffectFunc,registerEffect,trace} from './index'
+import {trigger, EffectFunc,registerEffect,trace} from './reactive'
 
 /**
  * 实现computed函数

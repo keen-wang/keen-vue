@@ -1,5 +1,4 @@
-export {computed} from './computed'
-export {watch} from './watch'
+
 export interface EffectFuncOptions {
     label: string,
     scheduler?: (fn: Function) => void,

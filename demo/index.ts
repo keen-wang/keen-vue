@@ -1,4 +1,4 @@
-import { registerEffect, reactive, computed, watch } from './reactive'
+import { registerEffect, reactive, watch } from '../src'
 // 原始数据
 const originData: any = { text: 1, title: "old title", showText: true }
 // 原始数据代理
