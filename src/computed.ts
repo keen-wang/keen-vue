@@ -1,10 +1,10 @@
-import {trigger, EffectFunc,registerEffect,trace} from './reactive'
+import { trigger, EffectFunc, registerEffect, track } from './reactive'
 
 /**
  * 实现computed函数
  * 只有当读取计算属性的值时才会去执行副作用函数
  */
- export function computed(getter: EffectFunc): { value: any } {
+export function computed(getter: EffectFunc): { value: any } {
     //value 用于缓存上一次取到的值
     let value: any
     // dirty 标识是否需要重新计算属性
@@ -29,8 +29,8 @@ import {trigger, EffectFunc,registerEffect,trace} from './reactive'
                 // dirty 设置false, 利用缓存减少副作用函数执行次数
                 dirty = false
             }
-            // 将obj设为响应式： 属性值被读取时触发trace
-            trace(obj, 'value')
+            // 将obj设为响应式： 属性值被读取时触发track
+            track(obj, 'value')
             return value;
         }
     }

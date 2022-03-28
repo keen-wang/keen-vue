@@ -1,45 +1,42 @@
-import { registerEffect, reactive, watch } from '../src'
+import { registerEffect, reactive } from '../src'
 // 原始数据
 const originData: any = {
     text: "hello AAA",
-    get title() {
-        // this 指向的是原始对象 originData 还是代理对象 data ?
-        return this.text
-    },
-    tellMeWhatIsText() {
-        alert(this.text)
-    }
+    title: "old title"
 }
 // 原始数据代理
 const data = reactive(originData)
 
 let text: number | undefined = undefined
 
-// // textEffect
-// registerEffect(() => {
-//     text = data.text
-//     console.log('text change!', text);
-//     document.getElementById("app")!.innerText = text + ""
-// }, {
-//     // scheduler(fn) {
-//     //     setTimeout(fn);
-//     // },
-//     label: "textEffect"
-// })
+// textEffect
+registerEffect(() => {
+    text = data.text
+    console.log('text change!', text);
+    document.getElementById("app")!.innerText = text + ""
+}, {
+    // scheduler(fn) {
+    //     setTimeout(fn);
+    // },
+    label: "textEffect"
+})
 
 
 // titleEffect
 registerEffect(() => {
-    const title = data.title
-    console.log('title change!', title);
-    document.getElementById("title")!.innerText = title || ""
-    data.tellMeWhatIsText()
+    // const title = data.title
+    // console.log('title change!', title);
+    // document.getElementById("title")!.innerText = title || ""
+    // data.tellMeWhatIsText()
+    if("title" in data) {
+        console.log(('title changed!!!'))
+    }
 }, {
     label: "titleEffect"
 })
 
 setTimeout(() => {
     console.log('one second later',);
-    // 这里触发了 titleEffect 副作用函数，data.title 的值应该为 BBB
-    data.text = "hello BBB"
+    // 这里需要触发 titleEffect 函数
+    data.title = "new title"
 }, 1000);

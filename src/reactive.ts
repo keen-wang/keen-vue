@@ -16,11 +16,19 @@ export class EffectFunc extends Function {
  *  存储副作用函数的集合： WeakMap 将闭包作用域中的对象强引用，避免影响垃圾回收。
  */
 const bucket: WeakMap<object, Map<string | Symbol, Set<Function>>> = new WeakMap()
-/** 数据响应式 */
+
+/**
+ *  数据响应式
+ * 拦截对象属性读取的几种方式：
+ * 1. 访问属性 obj.foo
+ * 2. 判断对象或原型上是否存在给定的 key : key in obj
+ * 3. for in 遍历对象的 key
+ */
 export function reactive<T extends object>(origin: T): T {
+    // let _iterateKey = Symbol()
     return new Proxy(origin, {
         get(target, key, receiver) {
-            trace(target, key)
+            track(target, key)
             // 通过 receiver 来读取属性值 getter 中的 this 也变为 receiver 即代理对象。
             return Reflect.get(target, key, receiver)
         },
@@ -30,13 +38,21 @@ export function reactive<T extends object>(origin: T): T {
             // target[key] = value
             trigger(target, key)
             return true
+        },
+        has(target, key) {
+            track(target, key)
+            return Reflect.has(target, key)
         }
+        // ownKeys(target) {
+        //     track(target, _iterateKey)
+        //     return Reflect.ownKeys(target)
+        // }
     })
 }
 /** 追踪属性 */
-export function trace(target: any, key: string | symbol) {
+export function track(target: any, key: string | symbol) {
     if (!activeEffect) return
-    console.warn('[trace] Bind key and effect: ', key, activeEffect?.options?.label);
+    console.warn('[track] Bind key and effect: ', key, activeEffect?.options?.label);
     let depsMap = bucket.get(target)
     if (!depsMap) {
         depsMap = new Map()
@@ -70,6 +86,13 @@ export function trigger(target: any, key: string | symbol) {
             effectsToRun.add(item)
         }
     })
+    // const iterateEffects = depMap.get(_iterateKey)
+    // iterateEffects && iterateEffects.forEach(item => {
+    //     //！！！ 组织副作用函数内触发trigger导致无限递归。
+    //     if (activeEffect !== item) {
+    //         effectsToRun.add(item)
+    //     }
+    // })
     effectsToRun.forEach((fn: any) => {
         if (fn.options?.scheduler) {
             // 可通过 scheduler 自行决定副作用函数执行的次数和时机
