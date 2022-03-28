@@ -22,6 +22,10 @@ export enum TriggerType {
  *  存储副作用函数的集合： WeakMap 将闭包作用域中的对象强引用，避免影响垃圾回收。
  */
 const bucket: WeakMap<object, Map<string | Symbol, Set<Function>>> = new WeakMap()
+/**
+ * for in 遍历对象 key 绑定的 _iterateKey
+ */
+let _iterateKey = Symbol()
 
 /**
  *  数据响应式
@@ -30,7 +34,6 @@ const bucket: WeakMap<object, Map<string | Symbol, Set<Function>>> = new WeakMap
  * 2. 判断对象或原型上是否存在给定的 key : key in obj
  * 3. for in 遍历对象的 key
  */
-let _iterateKey = Symbol()
 export function reactive<T extends object>(origin: T): T {
     return new Proxy(origin, {
         get(target, key, receiver) {
@@ -39,11 +42,15 @@ export function reactive<T extends object>(origin: T): T {
             return Reflect.get(target, key, receiver)
         },
         set(target, key, value, receiver) {
+            // @ts-ignore
+            const oldValue = target[key]
             const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerType.Set : TriggerType.Add
             //  设置新值
             Reflect.set(target, key, value, receiver)
-            // target[key] = value
-            trigger(target, key, type)
+            // 判断新旧的值不一样，而且都不是 NaN 时触发响应
+            if (value !== oldValue && (value === value || oldValue === oldValue)) {
+                trigger(target, key, type)
+            }
             return true
         },
         has(target, key) {
@@ -56,7 +63,7 @@ export function reactive<T extends object>(origin: T): T {
         },
         deleteProperty(target, key) {
             // 检查是否拥有属性
-            const hasKey = Object.prototype.hasOwnProperty.call(target,key)
+            const hasKey = Object.prototype.hasOwnProperty.call(target, key)
             const result = Reflect.deleteProperty(target, key)
             if (hasKey && result) {
                 trigger(target, _iterateKey, TriggerType.Delete)
