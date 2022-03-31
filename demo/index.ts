@@ -1,4 +1,4 @@
-import { registerEffect, reactive, shallRowReactive } from '../src'
+import { registerEffect, readonly, shallRowReadonly } from '../src'
 
 // 原始数据
 const originData: any = {
@@ -6,7 +6,7 @@ const originData: any = {
 }
 // 原始数据代理
 // const data = reactive(originData)
-const data = shallRowReactive(originData)
+const data = readonly(originData)
 
 
 registerEffect(() => {
