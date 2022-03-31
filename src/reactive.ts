@@ -37,6 +37,9 @@ let _iterateKey = Symbol()
 export function reactive<T extends object>(origin: T): T {
     return new Proxy(origin, {
         get(target, key, receiver) {
+            // raw 获取原始对象
+            if (key === "raw") return target
+
             track(target, key)
             // 通过 receiver 来读取属性值 getter 中的 this 也变为 receiver 即代理对象。
             return Reflect.get(target, key, receiver)
@@ -47,9 +50,12 @@ export function reactive<T extends object>(origin: T): T {
             const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerType.Set : TriggerType.Add
             //  设置新值
             Reflect.set(target, key, value, receiver)
-            // 判断新旧的值不一样，而且都不是 NaN 时触发响应
-            if (value !== oldValue && (value === value || oldValue === oldValue)) {
-                trigger(target, key, type)
+            // 判断 receiver 是不是 target 的代理对象，如果不是，那就是子对象触发的set,不触发副作用函数
+            if (receiver.raw === target) {
+                // 判断新旧的值不一样，而且都不是 NaN 时触发响应
+                if (value !== oldValue && (value === value || oldValue === oldValue)) {
+                    trigger(target, key, type)
+                }
             }
             return true
         },
