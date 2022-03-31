@@ -1,27 +1,26 @@
-import { registerEffect, reactive } from '../src'
+import { registerEffect, reactive, shallRowReactive } from '../src'
 
-const proto: any = {
-    name: "Proto",
-    id: 99
-}
 // 原始数据
 const originData: any = {
+    body: { title: "unknown" }
 }
 // 原始数据代理
-const child = reactive(originData)
-const parent = reactive(proto)
+// const data = reactive(originData)
+const data = shallRowReactive(originData)
 
-// 设置child的原型为parent
-Object.setPrototypeOf(child, parent)
 
-registerEffect(()=>{
-    console.log('registerEffect', child.id)
+registerEffect(() => {
+    const title = data.body.title
+    console.log("title change: ", title)
+    document.getElementById("title")!.innerText = title
+}, {
+    label: "titleEffect"
 })
 
 setTimeout(() => {
     console.log('one second later',);
-    setTimeout(() => {
-        child.id ++
-        // 应该只触发一次副作用函数执行
-    }, 1000);
+    data.body = {
+        title: "right title!!!"
+    }
+    data.body.title = "wrong title!!!"
 }, 1000);

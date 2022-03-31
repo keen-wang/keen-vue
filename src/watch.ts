@@ -1,4 +1,4 @@
-import { trigger, EffectFunc, registerEffect, track } from './reactive'
+import { trigger, EffectFunc, registerEffect, track } from './createReactive'
 interface WatchOptions {
     immediate?: boolean,
     flush?: "pre" | "post" | "sync" // 立即执行时机
