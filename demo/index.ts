@@ -1,16 +1,18 @@
-import { registerEffect, ref } from '../src'
+import { registerEffect, reactive, toRefs } from '../src'
 
 // 原始数据
 const originData: any = {
-    body: { title: "unknown" }
+    title: "unknown",
+    text: "what"
 }
 // 原始数据代理
-// const data = reactive(originData)
-const data = ref(10)
-
+const data = reactive(originData)
+const newData = {
+    ...toRefs(data)
+}
 
 registerEffect(() => {
-    const title = data.value
+    const title = newData.title.value
     console.log("title change: ", title)
     document.getElementById("title")!.innerText = title
 }, {
@@ -19,5 +21,5 @@ registerEffect(() => {
 
 setTimeout(() => {
     console.log('one second later',);
-    data.value = 2000
+    newData.title.value = "new title"
 }, 1000);
