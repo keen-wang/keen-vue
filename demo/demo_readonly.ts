@@ -1,4 +1,4 @@
-import { registerEffect, ref } from '../src'
+import { registerEffect, readonly, shallRowReadonly } from '../src'
 
 // 原始数据
 const originData: any = {
@@ -6,11 +6,11 @@ const originData: any = {
 }
 // 原始数据代理
 // const data = reactive(originData)
-const data = ref(10)
+const data = readonly(originData)
 
 
 registerEffect(() => {
-    const title = data.value
+    const title = data.body.title
     console.log("title change: ", title)
     document.getElementById("title")!.innerText = title
 }, {
@@ -19,5 +19,8 @@ registerEffect(() => {
 
 setTimeout(() => {
     console.log('one second later',);
-    data.value = 2000
+    data.body = {
+        title: "right title!!!"
+    }
+    data.body.title = "wrong title!!!"
 }, 1000);
