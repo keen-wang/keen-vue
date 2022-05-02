@@ -35,3 +35,21 @@ export function toRefs(obj: any): any {
     }
     return ref
 }
+
+export function proxyRefs(target: any) {
+    return new Proxy(target, {
+        get(target, key, receiver) {
+            const value = Reflect.get(target, key, receiver)
+            // 自动脱 ref 实现：读取值是ref,则返回 value 
+            return value.__v_isRef ? value.value : value
+        },
+        set(target, key, newVal, receiver) {
+            const value = target[key]
+            if (value.__v_isRef) {
+                value.value = newVal
+                return true
+            }
+            return Reflect.set(target, key, newVal, receiver)
+        }
+    })
+}
