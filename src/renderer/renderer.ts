@@ -1,5 +1,25 @@
 import { VirtualElement } from "./virtualElement";
-export function createRenderer() {
+
+interface OperationOptions {
+    createElement: (tag: string) => Element,
+    setElementText: (el: Element, text: string) => void,
+    insert: (el: Element, parent: Element, anchor: Element | null) => void
+}
+
+// 将浏览器的api作为配置项参数传入，增加扩展性
+const browserOptions: OperationOptions = {
+    createElement: ((tag: string): Element => {
+        return document.createElement(tag)
+    }),
+    setElementText: ((el: Element, text: string): void => {
+        el.textContent = text
+    }),
+    insert: ((el: Element, parent: Element, anchor: Element | null = null): void => {
+        parent.insertBefore(el, anchor)
+    })
+}
+export function createRenderer(options: OperationOptions = browserOptions) {
+    let { createElement, setElementText, insert } = options
     function render(vnode: VirtualElement | undefined, container: Element) {
         const originNode = (container as any)._vnode
         if (vnode) {
@@ -23,13 +43,13 @@ export function createRenderer() {
     }
     function mountElement(vnode: VirtualElement, container: Element) {
         // 创建dom
-        const el = document.createElement(vnode.type)
+        const el = createElement(vnode.type)
         // 处理子节点
         if (typeof vnode.children === "string") {
             // 字符串类型设置textContent
-            el.textContent = vnode.children
+            setElementText(el, vnode.children)
         }
-        container.appendChild(el)
+        insert(el, container, null)
     }
 
     return {
