@@ -54,12 +54,24 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         }
         (container as any)._vnode = vnode
     }
-    function patch(origin: VirtualElement, newNode: VirtualElement, container: Element) {
-        if (!origin) {
+    function patch(oldNode: VirtualElement | null, newNode: VirtualElement, container: Element) {
+        if (oldNode && oldNode.type !== newNode.type) {
             // 原节点不存在则进行挂载 mount
-            mountElement(newNode, container)
-        } else {
-            // origin 存在则进行打补丁
+            unmount(oldNode)
+            oldNode = null
+        }
+        const { type } = newNode;
+        if (typeof type === "string") {
+            if (!oldNode) {
+                mountElement(newNode, container)
+            } else {
+                // origin 存在则进行打补丁
+                // patchElement(oldNode,newNode)
+            }
+        } else if (typeof type === "object") {
+            // 处理组件
+        } else if (type === "xxx") {
+            // 处理其他类型
         }
     }
     function mountElement(vnode: VirtualElement, container: Element) {
