@@ -20,7 +20,13 @@ const browserOptions: OperationOptions = {
     }),
     patchProps(el: any, key: string, preValue: any = null, value: any) {
         // 兼容 setAttribute 和 DOM properties 属性设置的缺陷
-        if (key === "class") {
+        if (/^on/.test(key)) {
+            const name = key.slice(2).toLowerCase()
+            // 移除上个事件
+            preValue && el.removeEventListener(name, preValue)
+            // 绑定新事件
+            value && el.addEventListener(name, value)
+        } else if (key === "class") {
             // className 设置类名比 setAttr el.classList 性能更优
             el.className = value || ""
         } else if (shouldSetAsProps(el, key, value)) {
