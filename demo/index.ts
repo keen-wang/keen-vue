@@ -3,6 +3,10 @@ import { createRenderer, VirtualElement } from '../src'
 const renderer = createRenderer()
 const container = document.querySelector("#app")
 if (container) {
-    const el = new VirtualElement("h1", "hello world")
+    const el = new VirtualElement("div", [
+        new VirtualElement("p", "what?")
+    ], {
+        id: "wrapper"
+    })
     renderer.render(el, container)
 }

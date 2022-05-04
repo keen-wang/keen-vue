@@ -1,6 +1,6 @@
 export class VirtualElement {
-    constructor(public type: string, public children: VirtualElement[] | string) {
+
+    constructor(public type: string, public children: VirtualElement[] | string, public props: any = {}) {
 
     }
-
 }
