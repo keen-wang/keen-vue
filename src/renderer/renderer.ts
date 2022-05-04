@@ -49,7 +49,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         } else {
             if (originNode) {
                 // vnode 不存在，原来的已经挂载，则进行卸载 unmount 操作
-                container.innerHTML = ""
+                unmount(originNode)
             }
         }
         (container as any)._vnode = vnode
@@ -59,12 +59,12 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             // 原节点不存在则进行挂载 mount
             mountElement(newNode, container)
         } else {
-            // n1 存在则进行打补丁
+            // origin 存在则进行打补丁
         }
     }
     function mountElement(vnode: VirtualElement, container: Element) {
         // 创建dom
-        const el: any = createElement(vnode.type)
+        const el: any = vnode.el = createElement(vnode.type)
         // 处理子节点
         if (typeof vnode.children === "string") {
             // 字符串类型设置textContent
@@ -77,6 +77,12 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             }
         }
         insert(el, container, null)
+    }
+    function unmount(vnode: VirtualElement) {
+        const parent = vnode.el.parentNode
+        if (parent) {
+            parent.removeChild(vnode.el)
+        }
     }
     return {
         render
