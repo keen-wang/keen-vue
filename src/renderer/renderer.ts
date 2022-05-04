@@ -21,11 +21,27 @@ const browserOptions: OperationOptions = {
     patchProps(el: any, key: string, preValue: any = null, value: any) {
         // 兼容 setAttribute 和 DOM properties 属性设置的缺陷
         if (/^on/.test(key)) {
+            // 使用invoker 伪造事件函数可以减少 addEventListener 的调用，优化性能
+            const invokerMap = el._vei || (el._vei = {})
+            let invoker = invokerMap[key]
             const name = key.slice(2).toLowerCase()
-            // 移除上个事件
-            preValue && el.removeEventListener(name, preValue)
-            // 绑定新事件
-            value && el.addEventListener(name, value)
+            if (value) {
+                if (!invoker) {
+                    // 如果没有invoker 则伪造一个存在el._vei, vei-> vue event invoker
+                    invoker = el._vei = (e: Event) => {
+                        //  伪造事件函数执行时，执行真正的事件函数
+                        invoker.value(e)
+                    }
+                    invoker.value = value
+                    el.addEventListener(name, invoker)
+                } else {
+                    // invoker 存在的话只需要修改value
+                    invoker.value = value
+                }
+            } else if (invoker) {
+                // 移除事件
+                el.removeEventListener(name, invoker)
+            }
         } else if (key === "class") {
             // className 设置类名比 setAttr el.classList 性能更优
             el.className = value || ""

@@ -15,6 +15,9 @@ if (container) {
             id: "title",
             onClick: () => {
                 console.log("click h2 tag!")
+            },
+            onMouseover: () => {
+                console.log("hover h2 tag!")
             }
         }), container)
         setTimeout(() => {
