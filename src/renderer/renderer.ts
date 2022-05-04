@@ -20,7 +20,10 @@ const browserOptions: OperationOptions = {
     }),
     patchProps(el: any, key: string, preValue: any = null, value: any) {
         // 兼容 setAttribute 和 DOM properties 属性设置的缺陷
-        if (shouldSetAsProps(el, key, value)) {
+        if (key === "class") {
+            // className 设置类名比 setAttr el.classList 性能更优
+            el.className = value || ""
+        } else if (shouldSetAsProps(el, key, value)) {
             const type = typeof el[key]
             if (type === "boolean" && value === "") {
                 el[key] = true
