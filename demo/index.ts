@@ -13,9 +13,13 @@ if (container) {
     setTimeout(() => {
         renderer.render(new VirtualElement("h2", "h2", {
             id: "title",
-            onClick: () => {
-                console.log("click h2 tag!")
-            },
+            onClick: [
+                () => {
+                    console.log("log1: click h2 tag!")
+                }, () => {
+                    console.log("log2: click h2 tag!")
+                }
+            ],
             onMouseover: () => {
                 console.log("hover h2 tag!")
             }

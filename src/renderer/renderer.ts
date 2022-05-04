@@ -28,9 +28,13 @@ const browserOptions: OperationOptions = {
             if (value) {
                 if (!invoker) {
                     // 如果没有invoker 则伪造一个存在el._vei, vei-> vue event invoker
-                    invoker = el._vei = (e: Event) => {
+                    invoker = el._vei[key] = (e: Event) => {
                         //  伪造事件函数执行时，执行真正的事件函数
-                        invoker.value(e)
+                        if (Array.isArray(invoker.value)) {
+                            invoker.value.forEach((fn: Function) => fn(e))
+                        } else {
+                            invoker.value(e)
+                        }
                     }
                     invoker.value = value
                     el.addEventListener(name, invoker)
