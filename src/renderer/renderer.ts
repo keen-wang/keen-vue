@@ -107,6 +107,10 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         if (typeof vnode.children === "string") {
             // 字符串类型设置textContent
             setElementText(el, vnode.children)
+        } else if (Array.isArray(vnode.children)) {
+            vnode.children.forEach(item => {
+                patch(null, item, el)
+            })
         }
         // 处理元素属性
         if (vnode.props) {

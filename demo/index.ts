@@ -11,8 +11,12 @@ if (container) {
     })
     renderer.render(el, container)
     setTimeout(() => {
-        renderer.render(new VirtualElement("h2", "h2", {
-            id: "title",
+        renderer.render(new VirtualElement("div", [
+            new VirtualElement("h2", "h2", {
+                id: "title"
+            })
+        ], {
+            id: "wrapper",
             onClick: [
                 () => {
                     console.log("log1: click h2 tag!")
