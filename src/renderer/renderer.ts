@@ -92,12 +92,21 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 mountElement(newNode, container)
             } else {
                 // origin 存在则进行打补丁
-                // patchElement(oldNode,newNode)
+                patchElement(oldNode, newNode)
             }
         } else if (typeof type === "object") {
             // 处理组件
         } else if (type === "xxx") {
             // 处理其他类型
+        }
+    }
+    function patchElement(oldNode: VirtualElement, newNode: VirtualElement) {
+        const el: any = oldNode.el
+        // 处理元素属性
+        if (newNode.props) {
+            for (const key in newNode.props) {
+                patchProps(el, key, null, newNode.props[key])
+            }
         }
     }
     function mountElement(vnode: VirtualElement, container: Element) {

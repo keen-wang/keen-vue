@@ -1,35 +1,35 @@
-import { createRenderer, VirtualElement } from '../src'
+import { createRenderer, VirtualElement, ref, registerEffect } from '../src'
+
+const isActive = ref(false)
 
 const renderer = createRenderer()
-const container = document.querySelector("#app")
-if (container) {
-    const el = new VirtualElement("h1", "h1", {
-        id: "title",
-        onClick: () => {
-            console.log("click h1 tag!")
-        }
-    })
-    renderer.render(el, container)
-    setTimeout(() => {
-        renderer.render(new VirtualElement("div", [
-            new VirtualElement("h2", "h2", {
-                id: "title"
-            })
-        ], {
+registerEffect(() => {
+    console.log('副作用函数执行', isActive.value);
+    const container = document.querySelector("#app")
+    if (container) {
+        const vnode = new VirtualElement("div", {
             id: "wrapper",
-            onClick: [
-                () => {
-                    console.log("log1: click h2 tag!")
-                }, () => {
-                    console.log("log2: click h2 tag!")
-                }
-            ],
-            onMouseover: () => {
-                console.log("hover h2 tag!")
-            }
-        }), container)
-        setTimeout(() => {
-            renderer.render(undefined, container)
-        }, 10000);
-    }, 1000);
-}
+            style: "background: " + (isActive.value ? "#f00" : "#0f0"),
+            ...isActive.value ? {
+                onClick: [
+                    () => {
+                        console.log(" click wrapper tag!")
+                    }
+                ],
+            } : {}
+        }, [
+            new VirtualElement("h2", {
+                id: "title",
+                onClick: [
+                    () => {
+                        console.log(" click h2 tag!")
+                        isActive.value = true
+                    }
+                ],
+            }, "h2")
+        ])
+        renderer.render(vnode, container)
+    }
+}, {
+    label: "renderer"
+})
