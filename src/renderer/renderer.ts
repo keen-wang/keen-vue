@@ -29,6 +29,8 @@ const browserOptions: OperationOptions = {
                 if (!invoker) {
                     // 如果没有invoker 则伪造一个存在el._vei, vei-> vue event invoker
                     invoker = el._vei[key] = (e: Event) => {
+                        // 如果事件触发时间没有绑定监听事件，则不执行回调
+                        if (e.timeStamp < invoker.attachedTime) return
                         //  伪造事件函数执行时，执行真正的事件函数
                         if (Array.isArray(invoker.value)) {
                             invoker.value.forEach((fn: Function) => fn(e))
@@ -37,6 +39,7 @@ const browserOptions: OperationOptions = {
                         }
                     }
                     invoker.value = value
+                    invoker.attachedTime = performance.now()
                     el.addEventListener(name, invoker)
                 } else {
                     // invoker 存在的话只需要修改value
