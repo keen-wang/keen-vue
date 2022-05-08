@@ -1,4 +1,4 @@
-import { VirtualElement, TextType, CommentType } from "./virtualElement";
+import { VirtualElement, VText, VComment, VFragment } from "./virtualElement";
 interface OperationOptions {
     createElement: (tag: string) => Element,
     setElementText: (el: Element, text: string) => void,
@@ -112,7 +112,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 // origin 存在则进行打补丁
                 patchElement(oldNode, newNode)
             }
-        } else if (type === TextType && typeof newNode.children === "string") {
+        } else if (type === VText && typeof newNode.children === "string") {
             // 渲染文本节点
             if (!oldNode) {
                 const el = newNode.el = createText(newNode.children)
@@ -123,7 +123,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                     setText(el, newNode.children)
                 }
             }
-        } else if (type === CommentType && typeof newNode.children === "string") {
+        } else if (type === VComment && typeof newNode.children === "string") {
             // 渲染注释节点
             if (!oldNode) {
                 const el = newNode.el = createComment(newNode.children)
@@ -134,10 +134,17 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                     setComment(el, newNode.children)
                 }
             }
+        } else if (type === VFragment && Array.isArray(newNode.children)) {
+            // 渲染注释节点
+            if (!oldNode) {
+                // 旧节点不存在，直接将 Fragment 挂载在容器
+                newNode.children.forEach(item => mountElement(item, container))
+            } else {
+                // 如果旧节点存在，只需要更新 Fragment 的子节点
+                patchChildren(oldNode, newNode, container)
+            }
         } else if (typeof type === "object") {
             // 处理组件
-        } else if (type === "xxx") {
-            // 处理其他类型
         }
     }
     /**

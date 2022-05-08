@@ -1,4 +1,4 @@
-import { createRenderer, VirtualElement, ref, registerEffect, TextType, CommentType } from '../src'
+import { createRenderer, VirtualElement, ref, registerEffect, VText, VComment, VFragment } from '../src'
 
 const isActive = ref(false)
 
@@ -9,7 +9,7 @@ registerEffect(() => {
     if (container) {
         const vnode = new VirtualElement("div", {
             id: "wrapper",
-            style: "background: " + (isActive.value ? "#f00" : "#0f0"),
+            style: "background: " + (isActive.value ? "#8888e3" : "#aaf373"),
             ...isActive.value ? {
                 onClick: [
                     () => {
@@ -26,7 +26,7 @@ registerEffect(() => {
                         isActive.value = true
                     }
                 ],
-            }, [new VirtualElement(TextType, {}, "h1"), new VirtualElement(CommentType, {}, "这是注释")]),
+            }, [new VirtualElement(VText, {}, "h1"), new VirtualElement(VComment, {}, "这是注释")]),
             ...isActive.value ? [
                 new VirtualElement("h3", {
                     id: "title3",
@@ -36,7 +36,15 @@ registerEffect(() => {
                             isActive.value = true
                         }
                     ],
-                }, "h3")
+                }, "h3"),
+
+                new VirtualElement("ol", {
+                    class: "list",
+                }, [
+                    new VirtualElement(VFragment, {}, [
+                        "1", "2", "3"
+                    ].map(item => new VirtualElement("li", {}, item)))
+                ])
             ] : []
         ])
         renderer.render(vnode, container)
