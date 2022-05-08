@@ -201,7 +201,6 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             // 新子节点为空
             // 旧节点为一组节点时，先卸载每个节点
             if (Array.isArray(oldNode.children)) {
-                // 暴力更新一组子节点，可用 diff 算法优化
                 oldNode.children.forEach(item => unmount(item));
             } else {
                 setElementText(container, "")
@@ -209,7 +208,12 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         }
     }
     function mountElement(vnode: VirtualElement, container: Element) {
-        if (typeof vnode.type !== "string") return
+        if (vnode.type === VFragment && Array.isArray(vnode.children)) {
+            vnode.children.forEach(item => {
+                mountElement(item, container)
+            });
+            return
+        } else if (typeof vnode.type !== "string") return
         // 创建dom
         const el: any = vnode.el = createElement(vnode.type)
         // 处理子节点
@@ -230,6 +234,12 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         insert(el, container, null)
     }
     function unmount(vnode: VirtualElement) {
+        if (vnode.type === VFragment && Array.isArray(vnode.children)) {
+            vnode.children.forEach(item => {
+                unmount(item)
+            });
+            return
+        }
         const parent = vnode.el.parentNode
         if (parent) {
             parent.removeChild(vnode.el)
