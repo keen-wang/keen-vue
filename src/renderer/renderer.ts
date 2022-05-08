@@ -103,12 +103,64 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             // 处理其他类型
         }
     }
+    /**
+     * 更新元素
+     * @param oldNode 
+     * @param newNode 
+     */
     function patchElement(oldNode: VirtualElement, newNode: VirtualElement) {
-        const el: any = oldNode.el
-        // 处理元素属性
-        if (newNode.props) {
-            for (const key in newNode.props) {
-                patchProps(el, key, null, newNode.props[key])
+        const el: any = newNode.el = oldNode.el
+        // 处理元素属性 props
+        const oldProps = oldNode.props
+        const newProps = newNode.props
+        for (const key in newProps) {
+            if (newProps[key] !== oldProps[key]) {
+                patchProps(el, key, oldProps[key], newProps[key])
+            }
+        } for (const key in oldProps) {
+            if (!(key in newProps)) {
+                patchProps(el, key, oldProps[key], null)
+            }
+        }
+        // 处理元素children
+        patchChildren(oldNode, newNode, el)
+    }
+    /**
+     * 更新子节点
+     * @param oldNode 
+     * @param newNode 
+     * @param container 
+     */
+    function patchChildren(oldNode: VirtualElement, newNode: VirtualElement, container: Element) {
+        // 判断新子节点是否为文本节点
+        if (typeof newNode.children === "string") {
+            // 旧节点的类型有三种可能：没有子节点、文本节点、文件及一组子节点
+            // 旧节点为一组节点时，先卸载每个节点
+            if (Array.isArray(oldNode.children)) {
+                oldNode.children.forEach(item => unmount(item));
+            }
+            // 将新文本内容插入
+            setElementText(container, newNode.children)
+
+        } else if (Array.isArray(newNode.children)) {
+            // 新子节点为一组子节点
+            // 旧节点为一组节点时，先卸载每个节点
+            if (Array.isArray(oldNode.children)) {
+                // 暴力更新一组子节点，可用 diff 算法优化
+                oldNode.children.forEach(item => unmount(item));
+                newNode.children.forEach(item => mountElement(item, container))
+            } else {
+                setElementText(container, "")
+                newNode.children.forEach(item => mountElement(item, container))
+            }
+        } else {
+            // 新子节点为空
+            // 旧节点为一组节点时，先卸载每个节点
+            if (Array.isArray(oldNode.children)) {
+                // 暴力更新一组子节点，可用 diff 算法优化
+                oldNode.children.forEach(item => unmount(item));
+            } else {
+                setElementText(container, "")
             }
         }
     }

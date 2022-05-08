@@ -26,10 +26,22 @@ registerEffect(() => {
                         isActive.value = true
                     }
                 ],
-            }, "h2")
+            }, "h2"),
+            ...isActive.value ? [
+                new VirtualElement("h3", {
+                    id: "title3",
+                    onClick: [
+                        () => {
+                            console.log(" click h3 tag!")
+                            isActive.value = true
+                        }
+                    ],
+                }, "h3")
+            ] : []
         ])
         renderer.render(vnode, container)
     }
 }, {
     label: "renderer"
 })
+
