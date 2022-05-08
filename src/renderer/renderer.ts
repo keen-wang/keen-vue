@@ -1,10 +1,13 @@
-import { VirtualElement } from "./virtualElement";
-
+import { VirtualElement, TextType, CommentType } from "./virtualElement";
 interface OperationOptions {
     createElement: (tag: string) => Element,
     setElementText: (el: Element, text: string) => void,
-    insert: (el: Element, parent: Element, anchor: Element | null) => void,
-    patchProps: (el: any, key: string, preValue: any, value: any) => void
+    insert: (el: Element | Text | Comment, parent: Element, anchor: Element | null) => void,
+    patchProps: (el: any, key: string, preValue: any, value: any) => void,
+    createText: (text: string) => Text,
+    setText: (el: Text, text: string) => void,
+    createComment: (text: string) => Comment,
+    setComment: (el: Comment, text: string) => void,
 }
 
 // 将浏览器的api作为配置项参数传入，增加扩展性
@@ -15,7 +18,7 @@ const browserOptions: OperationOptions = {
     setElementText: ((el: Element, text: string): void => {
         el.textContent = text
     }),
-    insert: ((el: Element, parent: Element, anchor: Element | null = null): void => {
+    insert: ((el: Element | Text | Comment, parent: Element, anchor: Element | null = null): void => {
         parent.insertBefore(el, anchor)
     }),
     patchProps(el: any, key: string, preValue: any = null, value: any) {
@@ -66,10 +69,22 @@ const browserOptions: OperationOptions = {
             if (key === "fom" && el.tagName === "input") return false
             return key in el
         }
-    }
+    },
+    createText: ((text: string): Text => {
+        return document.createTextNode(text)
+    }),
+    setText: ((el: Text, text: string): void => {
+        el.nodeValue = text
+    }),
+    createComment: ((text: string): Comment => {
+        return document.createComment(text)
+    }),
+    setComment: ((el: Comment, text: string): void => {
+        el.nodeValue = text
+    }),
 }
 export function createRenderer(options: OperationOptions = browserOptions) {
-    let { createElement, setElementText, insert, patchProps } = options
+    let { createElement, setElementText, insert, patchProps, createText, setText, createComment, setComment } = options
     function render(vnode: VirtualElement | undefined, container: Element) {
         const originNode = (container as any)._vnode
         if (vnode) {
@@ -96,6 +111,28 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             } else {
                 // origin 存在则进行打补丁
                 patchElement(oldNode, newNode)
+            }
+        } else if (type === TextType && typeof newNode.children === "string") {
+            // 渲染文本节点
+            if (!oldNode) {
+                const el = newNode.el = createText(newNode.children)
+                insert(el, container, null)
+            } else {
+                const el = newNode.el = oldNode.el
+                if (newNode.children !== oldNode.children) {
+                    setText(el, newNode.children)
+                }
+            }
+        } else if (type === CommentType && typeof newNode.children === "string") {
+            // 渲染注释节点
+            if (!oldNode) {
+                const el = newNode.el = createComment(newNode.children)
+                insert(el, container, null)
+            } else {
+                const el = newNode.el = oldNode.el
+                if (newNode.children !== oldNode.children) {
+                    setComment(el, newNode.children)
+                }
             }
         } else if (typeof type === "object") {
             // 处理组件
@@ -165,6 +202,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         }
     }
     function mountElement(vnode: VirtualElement, container: Element) {
+        if (typeof vnode.type !== "string") return
         // 创建dom
         const el: any = vnode.el = createElement(vnode.type)
         // 处理子节点

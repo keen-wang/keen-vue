@@ -1,4 +1,4 @@
-import { createRenderer, VirtualElement, ref, registerEffect } from '../src'
+import { createRenderer, VirtualElement, ref, registerEffect, TextType, CommentType } from '../src'
 
 const isActive = ref(false)
 
@@ -26,7 +26,7 @@ registerEffect(() => {
                         isActive.value = true
                     }
                 ],
-            }, "h2"),
+            }, [new VirtualElement(TextType, {}, "h1"), new VirtualElement(CommentType, {}, "这是注释")]),
             ...isActive.value ? [
                 new VirtualElement("h3", {
                     id: "title3",
