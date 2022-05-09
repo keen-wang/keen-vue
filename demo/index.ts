@@ -8,22 +8,15 @@ registerEffect(() => {
     if (container) {
         const vnode = new VirtualElement("ol", {
             class: "list",
+            onClick: () => {
+                isActive.value = !isActive.value
+            }
         }, [
-            new VirtualElement(VFragment, {}, [
-                "1", "2", "3"
-            ].map(item => new VirtualElement("li", {}, item)))
-        ])
+            new VirtualElement(VFragment, {}, (!isActive.value ?
+                ["1", "2", "3"] : ["3", "1", "2"]
+            ).map(item => new VirtualElement("li", {}, item + " " + isActive.value, item)))
+        ], "wrapper")
         renderer.render(vnode, container)
-        setTimeout(() => {
-            const vnode1 = new VirtualElement("ol", {
-                class: "list",
-            }, [
-                new VirtualElement(VFragment, {}, [
-                    "2", "3", "3"
-                ].map(item => new VirtualElement("li", {}, item)))
-            ])
-            renderer.render(vnode1, container)
-        }, 1000);
     }
 }, {
     label: "renderer"

@@ -98,7 +98,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         }
         (container as any)._vnode = vnode
     }
-    function patch(oldNode: VirtualElement | null, newNode: VirtualElement, container: Element) {
+    function patch(oldNode: VirtualElement | null, newNode: VirtualElement, container: Element, anchor: Element | null = null) {
         if (oldNode && oldNode.type !== newNode.type) {
             // 原节点不存在则进行挂载 mount
             unmount(oldNode)
@@ -107,7 +107,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         const { type } = newNode;
         if (typeof type === "string") {
             if (!oldNode) {
-                mountElement(newNode, container)
+                mountElement(newNode, container, anchor)
             } else {
                 // origin 存在则进行打补丁
                 patchElement(oldNode, newNode)
@@ -116,7 +116,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             // 渲染文本节点
             if (!oldNode) {
                 const el = newNode.el = createText(newNode.children)
-                insert(el, container, null)
+                insert(el, container, anchor)
             } else {
                 const el = newNode.el = oldNode.el
                 if (newNode.children !== oldNode.children) {
@@ -127,7 +127,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             // 渲染注释节点
             if (!oldNode) {
                 const el = newNode.el = createComment(newNode.children)
-                insert(el, container, null)
+                insert(el, container, anchor)
             } else {
                 const el = newNode.el = oldNode.el
                 if (newNode.children !== oldNode.children) {
@@ -187,12 +187,27 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             setElementText(container, newNode.children)
 
         } else if (Array.isArray(newNode.children)) {
-            // 新子节点为一组子节点
-            // 旧节点为一组节点时，先卸载每个节点
             if (Array.isArray(oldNode.children)) {
+                // 简单diff算法
+                const newChildList = newNode.children
+                const oldChildList = oldNode.children
+                const lastIndex = 0
+                newChildList.forEach((newChild, i) => {
+                    oldChildList.forEach((oldChild, j) => {
+                        if (newChild.key === oldChild.key && newChild.key !== undefined) {
+                            if (j < lastIndex) {
+                                // 需要移动dom节点
+                            } else {
+                                // 更新dem 元素
+                                patch(oldChild, newChild, container)
+                            }
+                        }
+                    })
+                })
                 // 暴力更新一组子节点，可用 diff 算法优化
-                oldNode.children.forEach(item => unmount(item));
-                newNode.children.forEach(item => mountElement(item, container))
+                // oldNode.children.forEach(item => unmount(item));
+                // 旧节点为一组节点时，先卸载每个节点
+                // newNode.children.forEach(item => mountElement(item, container))
             } else {
                 setElementText(container, "")
                 newNode.children.forEach(item => mountElement(item, container))
@@ -207,10 +222,10 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             }
         }
     }
-    function mountElement(vnode: VirtualElement, container: Element) {
+    function mountElement(vnode: VirtualElement, container: Element, anchor: Element | null = null) {
         if (vnode.type === VFragment && Array.isArray(vnode.children)) {
             vnode.children.forEach(item => {
-                mountElement(item, container)
+                mountElement(item, container, anchor)
             });
             return
         } else if (typeof vnode.type !== "string") return
@@ -231,7 +246,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 patchProps(el, key, null, vnode.props[key])
             }
         }
-        insert(el, container, null)
+        insert(el, container, anchor)
     }
     function unmount(vnode: VirtualElement) {
         if (vnode.type === VFragment && Array.isArray(vnode.children)) {
