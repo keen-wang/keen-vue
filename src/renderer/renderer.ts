@@ -2,7 +2,7 @@ import { VirtualElement, VText, VComment, VFragment } from "./virtualElement";
 interface OperationOptions {
     createElement: (tag: string) => Element,
     setElementText: (el: Element, text: string) => void,
-    insert: (el: Element | Text | Comment, parent: Element, anchor: Element | null) => void,
+    insert: (el: Element | Text | Comment, parent: Element, anchor: ChildNode | null) => void,
     patchProps: (el: any, key: string, preValue: any, value: any) => void,
     createText: (text: string) => Text,
     setText: (el: Text, text: string) => void,
@@ -18,7 +18,7 @@ const browserOptions: OperationOptions = {
     setElementText: ((el: Element, text: string): void => {
         el.textContent = text
     }),
-    insert: ((el: Element | Text | Comment, parent: Element, anchor: Element | null = null): void => {
+    insert: ((el: Element | Text | Comment, parent: Element, anchor: ChildNode | null = null): void => {
         parent.insertBefore(el, anchor)
     }),
     patchProps(el: any, key: string, preValue: any = null, value: any) {
@@ -191,18 +191,35 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 // 简单diff算法
                 const newChildList = newNode.children
                 const oldChildList = oldNode.children
-                const lastIndex = 0
-                newChildList.forEach((newChild, i) => {
-                    oldChildList.forEach((oldChild, j) => {
+                let lastIndex = 0
+                newChildList.find((newChild, i) => {
+                    const item = oldChildList.find((oldChild, j) => {
                         if (newChild.key === oldChild.key && newChild.key !== undefined) {
+                            // 更新dom 元素
+                            patch(oldChild, newChild, container)
                             if (j < lastIndex) {
                                 // 需要移动dom节点
+                                const preNode = newChildList[i - 1]
+                                if (preNode) {
+                                    const anchor = (preNode.el as Element).nextSibling
+                                    insert(newChild.el, container, anchor)
+                                }
                             } else {
-                                // 更新dem 元素
-                                patch(oldChild, newChild, container)
+                                lastIndex = j
                             }
+                            return true
                         }
                     })
+                    if (!item) {
+                        const preNode = newChildList[i - 1]
+                        let anchor = null
+                        if (preNode) {
+                            anchor = preNode.el.nextSibling
+                        } else {
+                            anchor = container.firstChild
+                        }
+                        patch(null, newChild, container, anchor)
+                    }
                 })
                 // 暴力更新一组子节点，可用 diff 算法优化
                 // oldNode.children.forEach(item => unmount(item));

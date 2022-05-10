@@ -11,11 +11,9 @@ registerEffect(() => {
             onClick: () => {
                 isActive.value = !isActive.value
             }
-        }, [
-            new VirtualElement(VFragment, {}, (!isActive.value ?
-                ["1", "2", "3"] : ["3", "1", "2"]
-            ).map(item => new VirtualElement("li", {}, item + " " + isActive.value, item)))
-        ], "wrapper")
+        }, (!isActive.value ?
+            ["1", "2", "3"] : ["3", "1", "2", "4"]
+        ).map(item => new VirtualElement("li", {}, item + " " + isActive.value, item)), "wrapper")
         renderer.render(vnode, container)
     }
 }, {
