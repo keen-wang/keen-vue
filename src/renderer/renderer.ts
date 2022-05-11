@@ -210,6 +210,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                             return true
                         }
                     })
+                    // 新增元素，直接插入
                     if (!item) {
                         const preNode = newChildList[i - 1]
                         let anchor = null
@@ -220,6 +221,15 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                         }
                         patch(null, newChild, container, anchor)
                     }
+                    // 寻找被删除的旧元素
+                    oldChildList.forEach(oldChild => {
+                        const exist = newChildList.find(newChild => (newChild.key === oldChild.key))
+                        if (!exist) {
+                            // 如果没找到对应新节点，进行删除
+                            unmount(oldChild)
+                        }
+                    })
+
                 })
                 // 暴力更新一组子节点，可用 diff 算法优化
                 // oldNode.children.forEach(item => unmount(item));
