@@ -188,49 +188,9 @@ export function createRenderer(options: OperationOptions = browserOptions) {
 
         } else if (Array.isArray(newNode.children)) {
             if (Array.isArray(oldNode.children)) {
-                // 简单diff算法
                 const newChildList = newNode.children
                 const oldChildList = oldNode.children
-                let lastIndex = 0
-                newChildList.find((newChild, i) => {
-                    const item = oldChildList.find((oldChild, j) => {
-                        if (newChild.key === oldChild.key && newChild.key !== undefined) {
-                            // 更新dom 元素
-                            patch(oldChild, newChild, container)
-                            if (j < lastIndex) {
-                                // 需要移动dom节点
-                                const preNode = newChildList[i - 1]
-                                if (preNode) {
-                                    const anchor = (preNode.el as Element).nextSibling
-                                    insert(newChild.el, container, anchor)
-                                }
-                            } else {
-                                lastIndex = j
-                            }
-                            return true
-                        }
-                    })
-                    // 新增元素，直接插入
-                    if (!item) {
-                        const preNode = newChildList[i - 1]
-                        let anchor = null
-                        if (preNode) {
-                            anchor = preNode.el.nextSibling
-                        } else {
-                            anchor = container.firstChild
-                        }
-                        patch(null, newChild, container, anchor)
-                    }
-                    // 寻找被删除的旧元素
-                    oldChildList.forEach(oldChild => {
-                        const exist = newChildList.find(newChild => (newChild.key === oldChild.key))
-                        if (!exist) {
-                            // 如果没找到对应新节点，进行删除
-                            unmount(oldChild)
-                        }
-                    })
-
-                })
+                indexDiff(oldChildList, newChildList, container)
                 // 暴力更新一组子节点，可用 diff 算法优化
                 // oldNode.children.forEach(item => unmount(item));
                 // 旧节点为一组节点时，先卸载每个节点
@@ -286,6 +246,106 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         if (parent) {
             parent.removeChild(vnode.el)
         }
+    }
+    /**
+     * 简单diff
+     * @param oldChildList 
+     * @param newChildList 
+     * @param container 
+     */
+    function easyDiff(oldChildList: VirtualElement[], newChildList: VirtualElement[], container: Element) {
+        // 简单diff算法
+        let lastIndex = 0
+        newChildList.find((newChild, i) => {
+            const item = oldChildList.find((oldChild, j) => {
+                if (newChild.key === oldChild.key && newChild.key !== undefined) {
+                    // 更新dom 元素
+                    patch(oldChild, newChild, container)
+                    if (j < lastIndex) {
+                        // 需要移动dom节点
+                        const preNode = newChildList[i - 1]
+                        if (preNode) {
+                            const anchor = (preNode.el as Element).nextSibling
+                            insert(newChild.el, container, anchor)
+                        }
+                    } else {
+                        lastIndex = j
+                    }
+                    return true
+                }
+            })
+            // 新增元素，直接插入
+            if (!item) {
+                const preNode = newChildList[i - 1]
+                let anchor = null
+                if (preNode) {
+                    anchor = preNode.el.nextSibling
+                } else {
+                    anchor = container.firstChild
+                }
+                patch(null, newChild, container, anchor)
+            }
+            // 寻找被删除的旧元素
+            oldChildList.forEach(oldChild => {
+                const exist = newChildList.find(newChild => (newChild.key === oldChild.key))
+                if (!exist) {
+                    // 如果没找到对应新节点，进行删除
+                    unmount(oldChild)
+                }
+            })
+
+        })
+    }
+    /**
+     * 双端diff
+     * @param oldChildList 
+     * @param newChildList 
+     * @param container 
+     */
+    function indexDiff(oldChildList: VirtualElement[], newChildList: VirtualElement[], container: Element) {
+
+        let oldStartIdx = 0
+        let oldEndIdx = oldChildList.length - 1
+        let newStartIdx = 0
+        let newEndIdx = oldChildList.length - 1
+        let oldStart = oldChildList[oldStartIdx]
+        let oldEnd = oldChildList[oldEndIdx]
+        let newStart = newChildList[newStartIdx]
+        let newEnd = newChildList[newEndIdx]
+
+        while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+            // 依次横向和交叉比较
+            if (oldStart.key === newStart.key) {
+                // 无需移动，修改索引
+                patch(oldStart, newStart, container)
+                oldStart = oldChildList[++oldStartIdx]
+                newStart = newChildList[++newStartIdx]
+            } else if (oldEnd.key === newEnd.key) {
+                // 无需移动，修改索引
+                patch(oldEnd, newEnd, container)
+                oldEnd = oldChildList[--oldEndIdx]
+                newEnd = newChildList[--newEndIdx]
+            } else if (oldStart.key === newEnd.key) {
+                // 更新元素
+                patch(oldStart, newEnd, container)
+                // 移动元素到最后
+                insert(oldStart.el, container, oldEnd.el.nextSibling)
+                // 修改索引
+                oldStart = oldChildList[++oldStartIdx]
+                newEnd = newChildList[--newEndIdx]
+            } else if (oldEnd.key === newStart.key) {
+                // 更新元素
+                patch(oldEnd, newStart, container)
+                // 移动元素到最前面
+                insert(oldEnd.el, container, oldStart.el)
+                // 修改索引
+                oldEnd = oldChildList[--oldEndIdx]
+                newStart = newChildList[++newStartIdx]
+            } else {
+                // 处理没有找到对应的节点
+            }
+        }
+
     }
     return {
         render
