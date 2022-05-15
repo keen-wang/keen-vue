@@ -307,7 +307,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         let oldStartIdx = 0
         let oldEndIdx = oldChildList.length - 1
         let newStartIdx = 0
-        let newEndIdx = oldChildList.length - 1
+        let newEndIdx = newChildList.length - 1
         let oldStart = oldChildList[oldStartIdx]
         let oldEnd = oldChildList[oldEndIdx]
         let newStart = newChildList[newStartIdx]
@@ -315,7 +315,13 @@ export function createRenderer(options: OperationOptions = browserOptions) {
 
         while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
             // 依次横向和交叉比较
-            if (oldStart.key === newStart.key) {
+
+            // 如果 oldStart 或 oldEnd 已处理变undefined 则跳过索引
+            if (!oldStart) {
+                oldStart = oldChildList[++oldStartIdx]
+            } else if (!oldEnd) {
+                oldEnd = oldChildList[--oldEndIdx]
+            } else if (oldStart.key === newStart.key) {
                 // 无需移动，修改索引
                 patch(oldStart, newStart, container)
                 oldStart = oldChildList[++oldStartIdx]
@@ -347,31 +353,40 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 let oldNode: VirtualElement | null = null
                 for (let index = oldStartIdx; index < oldEndIdx + 1; index++) {
                     if (oldNode) break
-                    if (oldChildList[index].key === newStart.key) {
+                    if (oldChildList[index] && oldChildList[index].key === newStart.key) {
                         oldIndex = index
                         oldNode = oldChildList[index]
                     }
                 }
-                const anchorNode = oldStart.el
-                // 更新元素
-                patch(oldNode, newStart, container)
-                // 移动元素到最前面
-                insert(newStart.el, container, anchorNode)
+                const anchor = oldStart.el
+                if (oldNode) {
+                    // 更新元素
+                    patch(oldNode, newStart, container)
+                    // 移动元素到最前面
+                    insert(newStart.el, container, anchor)
+                    // 标记已处理旧节点
+                    oldChildList[oldIndex] = undefined as any
+                } else {
+                    patch(null, newStart, container, anchor)
+                }
                 // 修改索引
                 newStart = newChildList[++newStartIdx]
-                if (oldNode) {
-                    oldChildList[oldIndex] = undefined as any
-                }
-            }
-            // 如果 oldStart 或 oldEnd 已处理变undefined 则跳过索引
-            if (!oldStart) {
-                oldStart = oldChildList[++oldStartIdx]
-            }
-            if (!oldEnd) {
-                oldEnd = oldChildList[--oldEndIdx]
             }
         }
-
+        // 删除剩余节点
+        if (oldStartIdx <= oldEndIdx && newEndIdx < newStartIdx) {
+            for (let index = oldStartIdx; index < oldEndIdx + 1; index++) {
+                const toDelNode = oldChildList[index]
+                toDelNode && unmount(oldChildList[index])
+            }
+        }
+        // 插入新增节点
+        if (newStartIdx <= newStartIdx && oldEndIdx < oldStartIdx) {
+            for (let index = newStartIdx; index < newEndIdx + 1; index++) {
+                const toAddNode = newChildList[index]
+                patch(null, toAddNode, container, oldStart.el)
+            }
+        }
     }
     return {
         render

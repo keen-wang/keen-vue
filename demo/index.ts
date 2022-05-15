@@ -12,7 +12,7 @@ registerEffect(() => {
                 isActive.value = !isActive.value
             }
         }, (!isActive.value ?
-            ["1", "3", "4", "2"] : ["3", "1", "2", "4"]
+            ["1", "3", "4", "2"] : ["5", "1", "2", "4"]
         ).map(item => new VirtualElement("li", {}, item + " " + isActive.value, item)), "wrapper")
         renderer.render(vnode, container)
     }
