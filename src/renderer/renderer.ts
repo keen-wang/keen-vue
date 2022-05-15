@@ -342,7 +342,33 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 oldEnd = oldChildList[--oldEndIdx]
                 newStart = newChildList[++newStartIdx]
             } else {
-                // 处理没有找到对应的节点
+                // 处理没有找到对应的节点,
+                let oldIndex = -1
+                let oldNode: VirtualElement | null = null
+                for (let index = oldStartIdx; index < oldEndIdx + 1; index++) {
+                    if (oldNode) break
+                    if (oldChildList[index].key === newStart.key) {
+                        oldIndex = index
+                        oldNode = oldChildList[index]
+                    }
+                }
+                const anchorNode = oldStart.el
+                // 更新元素
+                patch(oldNode, newStart, container)
+                // 移动元素到最前面
+                insert(newStart.el, container, anchorNode)
+                // 修改索引
+                newStart = newChildList[++newStartIdx]
+                if (oldNode) {
+                    oldChildList[oldIndex] = undefined as any
+                }
+            }
+            // 如果 oldStart 或 oldEnd 已处理变undefined 则跳过索引
+            if (!oldStart) {
+                oldStart = oldChildList[++oldStartIdx]
+            }
+            if (!oldEnd) {
+                oldEnd = oldChildList[--oldEndIdx]
             }
         }
 
