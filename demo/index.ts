@@ -1,24 +1,22 @@
 import { createRenderer, VirtualElement, ref, registerEffect, VText, VComment, VFragment } from '../src'
 
-const isActive = ref(false)
-const vNode = new VirtualElement("ol", {
-    class: "list",
-    onClick: () => {
-        isActive.value = !isActive.value
-    }
-}, (!isActive.value ?
-    ["1", "3", "4", "2"] : ["5", "1", "2", "4"]
-).map(item => new VirtualElement("li", {}, item + " " + isActive.value, item)), "wrapper")
 // 组件选项
 const componentOptions = {
     name: "component",
     data() {
         return {
-            title: "hello world"
+            title: "hello world",
+            isActive: false
         }
     },
-    render() {
-        return vNode
+    render(state: any) {
+        return new VirtualElement("ol", {
+            class: "list",
+            onClick: () => {
+                state.isActive = !state.isActive
+            }
+        }, (["1", "3", "4", "2"]
+        ).map(item => new VirtualElement("li", {}, item + " " + state.isActive, item)), "wrapper")
     }
 }
 // 创建组件虚拟节点

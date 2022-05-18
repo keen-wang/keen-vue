@@ -3,7 +3,7 @@ export const VText = Symbol()
 export const VComment = Symbol()
 export const VFragment = Symbol()
 export interface ComponentOptions {
-    render: () => VirtualElement,
+    render: (state: any) => VirtualElement,
     data: Function
 }
 export class VirtualElement {

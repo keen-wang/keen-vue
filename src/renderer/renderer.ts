@@ -1,3 +1,5 @@
+import { registerEffect } from "../createReactive";
+import { reactive } from "../reactive";
 import { VirtualElement, VText, VComment, VFragment, ComponentOptions } from "./virtualElement";
 interface OperationOptions {
     createElement: (tag: string) => Element,
@@ -274,11 +276,18 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         if (typeof vnode.type !== "object") throw "type error"
         const componentOptions = vnode.type
         // 获取render函数
-        const { render } = componentOptions as ComponentOptions
-        // 执行函数获取虚拟DOM
-        const subTree = render()
-        // patch 挂载组件内容
-        patch(null, subTree, container, anchor)
+        const { render, data } = componentOptions as ComponentOptions
+        // data 中返回的数据处理为响应式数据
+        const state = reactive(data())
+        // 注册副作用函数，当响应式数据变化时更新组件
+        registerEffect(() => {
+            // 执行函数获取虚拟DOM，将render的this指向state
+            const subTree = render.call(state, state)
+            // patch 挂载组件内容
+            patch(null, subTree, container, anchor)
+        }, {
+            label: "Component"
+        })
     }
     /**
      * 更新组件
