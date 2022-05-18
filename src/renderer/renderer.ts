@@ -279,13 +279,17 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         if (typeof vnode.type !== "object") throw "type error"
         const componentOptions = vnode.type
         // 获取render函数
-        const { render, data } = componentOptions as ComponentOptions
+        const { render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions as ComponentOptions
+
+        beforeCreate && beforeCreate()
+
         // data 中返回的数据处理为响应式数据
         const state = reactive(data())
-
         // 创建组件实例
         const instance = new VComponent(state)
         vnode.component = instance // 将实例挂在vnode,便于后续更新
+
+        created && created()
 
         // 注册副作用函数，当响应式数据变化时更新组件
         registerEffect(() => {
@@ -293,12 +297,17 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             const subTree = render.call(state, state)
             // 判断组件是否挂载
             if (instance.isMounted) {
+                beforeUpdate && beforeUpdate()
                 // 如果是已挂载则将instance上的旧子树进行更新
                 patch(instance.subTree, subTree, container, anchor)
+                updated && updated()
             } else {
+                beforeMount && beforeMount()
                 // patch 挂载组件内容
                 patch(null, subTree, container, anchor)
                 instance.isMounted = true
+
+                mounted && mounted()
             }
             instance.subTree = subTree
         }, {
