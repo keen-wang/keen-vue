@@ -1,4 +1,4 @@
-import { VirtualElement, VText, VComment, VFragment } from "./virtualElement";
+import { VirtualElement, VText, VComment, VFragment, ComponentOptions } from "./virtualElement";
 interface OperationOptions {
     createElement: (tag: string) => Element,
     setElementText: (el: Element, text: string) => void,
@@ -109,7 +109,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             if (!oldNode) {
                 mountElement(newNode, container, anchor)
             } else {
-                // origin 存在则进行打补丁
+                // origin 存在则进行打补丁，更新元素及子节点
                 patchElement(oldNode, newNode)
             }
         } else if (type === VText && typeof newNode.children === "string") {
@@ -144,7 +144,12 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 patchChildren(oldNode, newNode, container)
             }
         } else if (typeof type === "object") {
-            // 处理组件
+            // 处理组件,type 为组件 options
+            if (!oldNode) {
+                mountComponent(newNode, container, anchor)
+            } else {
+                patchComponent(newNode, container, anchor)
+            }
         }
     }
     /**
@@ -209,6 +214,13 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             }
         }
     }
+    /**
+     * 挂载节点
+     * @param vnode 
+     * @param container 
+     * @param anchor 
+     * @returns 
+     */
     function mountElement(vnode: VirtualElement, container: Element, anchor: Element | null = null) {
         if (vnode.type === VFragment && Array.isArray(vnode.children)) {
             vnode.children.forEach(item => {
@@ -235,6 +247,11 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         }
         insert(el, container, anchor)
     }
+    /**
+     * 卸载节点
+     * @param vnode 
+     * @returns 
+     */
     function unmount(vnode: VirtualElement) {
         if (vnode.type === VFragment && Array.isArray(vnode.children)) {
             vnode.children.forEach(item => {
@@ -247,6 +264,36 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             parent.removeChild(vnode.el)
         }
     }
+    /**
+     * 挂载组件
+     * @param vnode 
+     * @param container 
+     * @param anchor 
+     */
+    function mountComponent(vnode: VirtualElement, container: Element, anchor: Element | null = null) {
+        if (typeof vnode.type !== "object") throw "type error"
+        const componentOptions = vnode.type
+        // 获取render函数
+        const { render } = componentOptions as ComponentOptions
+        // 执行函数获取虚拟DOM
+        const subTree = render()
+        // patch 挂载组件内容
+        patch(null, subTree, container, anchor)
+    }
+    /**
+     * 更新组件
+     * @param vnode 
+     * @param container 
+     * @param anchor 
+     */
+    function patchComponent(vnode: VirtualElement, container: Element, anchor: Element | null = null) {
+
+    }
+
+
+
+
+
     /**
      * 简单diff
      * @param oldChildList 
