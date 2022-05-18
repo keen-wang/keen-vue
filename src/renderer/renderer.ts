@@ -1,6 +1,8 @@
 import { registerEffect } from "../createReactive";
 import { reactive } from "../reactive";
 import { VirtualElement, VText, VComment, VFragment, ComponentOptions } from "./virtualElement";
+import { getQueueJob } from './queueJob'
+const queueJob = getQueueJob()
 interface OperationOptions {
     createElement: (tag: string) => Element,
     setElementText: (el: Element, text: string) => void,
@@ -284,9 +286,12 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             // 执行函数获取虚拟DOM，将render的this指向state
             const subTree = render.call(state, state)
             // patch 挂载组件内容
+            // TODO: 这里传null只会挂载节点，不会更新节点，需要优化
             patch(null, subTree, container, anchor)
         }, {
-            label: "Component"
+            label: "Component",
+            // 副作用函数不会立即执行，等待queueJob函数调度，最后在一个微任务中执行
+            scheduler: queueJob
         })
     }
     /**
