@@ -4,21 +4,20 @@ export function getQueueJob(): JobFunc {
     const queue: Set<Function> = new Set()
     // 标识队列是否正在刷新
     let isFlushing = false
-    const p = Promise.resolve()
     // 队列调度器
     return function queueJon(job) {
         queue.add(job)
         if (!isFlushing) {
             isFlushing = true
             // 异步等待刷新结束再执行
-            p.then(() => {
+            setTimeout((() => {
                 try {
                     queue.forEach(job => job())
                 } finally {
                     isFlushing = false
                     queue.clear()
                 }
-            })
+            }), 0);
         }
     }
 
