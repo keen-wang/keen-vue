@@ -1,7 +1,8 @@
-import { createRenderer, VirtualElement, ref, registerEffect, VText, VComment, VFragment } from '../src'
+import { createRenderer, VirtualElement } from '../src'
+import { ComponentOptions } from '../src/component/component'
 
 // 组件选项
-const componentOptions = {
+const componentOptions: ComponentOptions = {
     name: "component",
     data() {
         return {
@@ -9,6 +10,9 @@ const componentOptions = {
             isActive: false,
             number: 0
         }
+    },
+    props: {
+        title: String
     },
     render(state: any) {
         return new VirtualElement("ol", {

@@ -1,8 +1,8 @@
 import { registerEffect } from "../createReactive";
-import { reactive } from "../reactive";
-import { VirtualElement, VText, VComment, VFragment, ComponentOptions } from "./virtualElement";
+import { reactive, shallRowReactive } from "../reactive";
+import { VirtualElement, VText, VComment, VFragment } from "./virtualElement";
 import { getQueueJob } from './queueJob'
-import { VComponent } from "../component/componnet";
+import { VComponent, ComponentOptions } from "../component/component";
 const queueJob = getQueueJob()
 interface OperationOptions {
     createElement: (tag: string) => Element,
@@ -279,14 +279,16 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         if (typeof vnode.type !== "object") throw "type error"
         const componentOptions = vnode.type
         // 获取render函数
-        const { render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions as ComponentOptions
+        const { render, data, props: propsOption, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions as ComponentOptions
 
         beforeCreate && beforeCreate()
 
         // data 中返回的数据处理为响应式数据
         const state = reactive(data())
+        // 获取 props 和 attrs 
+        const { props, attrs } = resolveProps(propsOption, vnode.props)
         // 创建组件实例
-        const instance = new VComponent(state)
+        const instance = new VComponent(state, shallRowReactive(props))
         vnode.component = instance // 将实例挂在vnode,便于后续更新
 
         created && created()
@@ -323,9 +325,28 @@ export function createRenderer(options: OperationOptions = browserOptions) {
      * @param anchor 
      */
     function patchComponent(vnode: VirtualElement, container: Element, anchor: Element | null = null) {
-
+        // TODO: 更新子节点中的组件节点
     }
-
+    /**
+     * 解析组件的 props 和 attrs
+     * @param options 
+     * @param vnodeProps 
+     * @returns 
+     */
+    function resolveProps(options: any, vnodeProps: any) {
+        const props: any = {} // 父组件传参
+        const attrs: any = {} // 组件自定属性
+        for (const key in vnodeProps) {
+            if (key in options) {
+                props[key] = vnodeProps[key]
+            } else {
+                attrs[key] = vnodeProps[key]
+            }
+        }
+        return {
+            props, attrs
+        }
+    }
 
 
 
