@@ -6,17 +6,20 @@ const componentOptions = {
     data() {
         return {
             title: "hello world",
-            isActive: false
+            isActive: false,
+            number: 0
         }
     },
     render(state: any) {
         return new VirtualElement("ol", {
             class: "list",
             onClick: () => {
-                state.isActive = !state.isActive
+                state.isActive = !state.isActive,
+                    state.number++
             }
-        }, (["1", "3", "4", "2"]
-        ).map(item => new VirtualElement("li", {}, item + " " + state.isActive, item)), "wrapper")
+        }, (!state.isActive ?
+            ["1", "3", "4", "2"] : ["5", "1", "2", "4"]
+        ).map(item => new VirtualElement("li", {}, item + " " + state.number, item)), "wrapper")
     }
 }
 // 创建组件虚拟节点

@@ -2,6 +2,7 @@ import { registerEffect } from "../createReactive";
 import { reactive } from "../reactive";
 import { VirtualElement, VText, VComment, VFragment, ComponentOptions } from "./virtualElement";
 import { getQueueJob } from './queueJob'
+import { VComponent } from "../component/componnet";
 const queueJob = getQueueJob()
 interface OperationOptions {
     createElement: (tag: string) => Element,
@@ -281,13 +282,25 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         const { render, data } = componentOptions as ComponentOptions
         // data 中返回的数据处理为响应式数据
         const state = reactive(data())
+
+        // 创建组件实例
+        const instance = new VComponent(state)
+        vnode.component = instance // 将实例挂在vnode,便于后续更新
+
         // 注册副作用函数，当响应式数据变化时更新组件
         registerEffect(() => {
-            // 执行函数获取虚拟DOM，将render的this指向state
+            // 执行函数获取最新虚拟DOM，将render的this指向state
             const subTree = render.call(state, state)
-            // patch 挂载组件内容
-            // TODO: 这里传null只会挂载节点，不会更新节点，需要优化
-            patch(null, subTree, container, anchor)
+            // 判断组件是否挂载
+            if (instance.isMounted) {
+                // 如果是已挂载则将instance上的旧子树进行更新
+                patch(instance.subTree, subTree, container, anchor)
+            } else {
+                // patch 挂载组件内容
+                patch(null, subTree, container, anchor)
+                instance.isMounted = true
+            }
+            instance.subTree = subTree
         }, {
             label: "Component",
             // 副作用函数不会立即执行，等待queueJob函数调度，最后在一个微任务中执行
