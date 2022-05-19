@@ -1,7 +1,7 @@
 import { VirtualElement } from '../renderer/virtualElement'
 export interface ComponentOptions {
     name?: string;
-    render: (state: any, props: any) => VirtualElement,
+    render: () => VirtualElement,
     data: Function;
     // 参数
     props?: any;

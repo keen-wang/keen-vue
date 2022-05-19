@@ -289,27 +289,54 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         const { props, attrs } = resolveProps(propsOption, vnode.props)
         // 创建组件实例
         const instance = new VComponent(state, shallowReactive(props))
+        // 创建组件上下文对象, 代理组件实例
+        const renderContext = new Proxy(instance, {
+            get(target, key, receiver) {
+                const { props, state } = target
+                if (state && key in state) {
+                    return state[key]
+                } else if (key in props) {
+                    return props[key]
+                } else {
+                    // TODO: 从methods、computed内取
+                    console.error(`key ${key.toString()} not exist`)
+                }
+            },
+            set(target, key, value, receiver) {
+                const { props, state } = target
+                if (state && key in state) {
+                    state[key] = value
+                } else if (key in props) {
+                    console.warn(`props ${key.toString()}  changed`)
+                    props[key] = value
+                } else {
+                    // TODO: 从methods、computed内取
+                    console.error(`key ${key.toString()} not exist`)
+                }
+                return true
+            }
+        })
         vnode.component = instance // 将实例挂在vnode,便于后续更新
 
-        created && created()
+        created && created.call(renderContext)
 
         // 注册副作用函数，当响应式数据变化时更新组件
         registerEffect(() => {
             // 执行函数获取最新虚拟DOM，将render的this指向state
-            const subTree = render.call(state, state, instance.props)
+            const subTree = render.call(renderContext)
             // 判断组件是否挂载
             if (instance.isMounted) {
-                beforeUpdate && beforeUpdate()
+                beforeUpdate && beforeUpdate.call(renderContext)
                 // 如果是已挂载则将instance上的旧子树进行更新
                 patch(instance.subTree, subTree, container, anchor)
-                updated && updated()
+                updated && updated.call(renderContext)
             } else {
-                beforeMount && beforeMount()
+                beforeMount && beforeMount.call(renderContext)
                 // patch 挂载组件内容
                 patch(null, subTree, container, anchor)
                 instance.isMounted = true
 
-                mounted && mounted()
+                mounted && mounted.call(renderContext)
             }
             instance.subTree = subTree
         }, {

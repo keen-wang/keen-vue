@@ -8,8 +8,9 @@ const childOptions: ComponentOptions = {
     data() {
         return {}
     },
-    render(state, props) {
-        return new VirtualElement("li", {}, props.name, "child")
+    render() {
+        const state = this as any
+        return new VirtualElement("li", {}, state.name, "child")
     }
 }
 // 组件选项
@@ -25,7 +26,8 @@ const componentOptions: ComponentOptions = {
     props: {
         title: String
     },
-    render(state: any) {
+    render() {
+        const state = this as any
         return new VirtualElement("ol", {
             class: "list",
             onClick: () => {
