@@ -1,4 +1,4 @@
-import { registerEffect, readonly, shallRowReadonly } from '../src'
+import { registerEffect, readonly } from '../src'
 
 // 原始数据
 const originData: any = {

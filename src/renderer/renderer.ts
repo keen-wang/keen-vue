@@ -1,5 +1,5 @@
 import { registerEffect } from "../createReactive";
-import { reactive, shallRowReactive } from "../reactive";
+import { reactive, shallowReactive } from "../reactive";
 import { VirtualElement, VText, VComment, VFragment } from "./virtualElement";
 import { getQueueJob } from './queueJob'
 import { VComponent, ComponentOptions } from "../component/component";
@@ -153,7 +153,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
             if (!oldNode) {
                 mountComponent(newNode, container, anchor)
             } else {
-                patchComponent(newNode, container, anchor)
+                patchComponent(oldNode, newNode, anchor)
             }
         }
     }
@@ -288,7 +288,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         // 获取 props 和 attrs 
         const { props, attrs } = resolveProps(propsOption, vnode.props)
         // 创建组件实例
-        const instance = new VComponent(state, shallRowReactive(props))
+        const instance = new VComponent(state, shallowReactive(props))
         vnode.component = instance // 将实例挂在vnode,便于后续更新
 
         created && created()
@@ -296,7 +296,7 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         // 注册副作用函数，当响应式数据变化时更新组件
         registerEffect(() => {
             // 执行函数获取最新虚拟DOM，将render的this指向state
-            const subTree = render.call(state, state)
+            const subTree = render.call(state, state, instance.props)
             // 判断组件是否挂载
             if (instance.isMounted) {
                 beforeUpdate && beforeUpdate()
@@ -324,8 +324,37 @@ export function createRenderer(options: OperationOptions = browserOptions) {
      * @param container 
      * @param anchor 
      */
-    function patchComponent(vnode: VirtualElement, container: Element, anchor: Element | null = null) {
-        // TODO: 更新子节点中的组件节点
+    function patchComponent(oldNode: VirtualElement, newNode: VirtualElement, anchor: Element | null = null) {
+        if (typeof newNode.type !== "object" || typeof oldNode.type !== "object") throw "type error"
+        const instance = (newNode.component = oldNode.component)
+        // 获取当前props
+        const props = instance?.props
+        if (hasPropsChanged(oldNode.props, newNode.props)) {
+            const { props: nextProps } = resolveProps((newNode.type as ComponentOptions).props, newNode.props)
+            // 更新和添加props
+            for (const key in nextProps) {
+                props[key] = nextProps[key]
+            }
+            // 删除props
+            for (const key in props) {
+                if (!(key in nextProps)) {
+                    delete props[key]
+                }
+            }
+
+        }
+    }
+
+    function hasPropsChanged(oldProps: any, newProps: any) {
+        const nextKeys = Object.keys(newProps)
+        if (nextKeys.length !== Object.keys(oldProps).length) {
+            return true
+        }
+        for (let index = 0; index < nextKeys.length; index++) {
+            const key = nextKeys[index];
+            if (newProps[key] !== oldProps[key]) return true
+        }
+        return false
     }
     /**
      * 解析组件的 props 和 attrs
