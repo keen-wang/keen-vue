@@ -295,8 +295,18 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         // 创建组件实例
         const instance = new VComponent(state, shallowReactive(props))
 
+        function emit(event: string, ...args: any[]) {
+            const eventName = `on${event[0].toUpperCase() + event.slice(1)}`
+            const handler = instance.props[eventName]
+            if (handler) {
+                handler(...args)
+            } else {
+                console.warn(`[emit] event "${event}" not register`)
+            }
+
+        }
         // 创建 setupContext
-        const setupContext: any = { attrs } // TODO: emit 和 slots 后续补充
+        const setupContext: any = { attrs, emit } // TODO: emit 和 slots 后续补充
         const setupResult = setup && setup(shallowReadonly(instance.props), setupContext)
         let setupState: any = null // setup返回响应式数据
         if (typeof setupResult === "function") {
@@ -420,7 +430,8 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         const props: any = {} // 父组件传参
         const attrs: any = {} // 组件自定属性
         for (const key in vnodeProps) {
-            if (key in options) {
+            // on 开头的都是props数据
+            if (key in options || key.startsWith("on")) {
                 props[key] = vnodeProps[key]
             } else {
                 attrs[key] = vnodeProps[key]

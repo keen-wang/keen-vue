@@ -6,13 +6,17 @@ const childOptions: ComponentOptions = {
         name: String
     },
     data() {
-        return {}
+        return {
+        }
     },
     setup: (props, context) => {
         return () => {
             const state = this as any
             return new VirtualElement("li", {}, props.name, "child")
         }
+    },
+    mounted() {
+        (this as any).emit("childMounted", "what")
     }
 }
 // 组件选项
@@ -41,12 +45,17 @@ const componentOptions: ComponentOptions = {
             }
         }, [
             // 插入子组件节点，props 传参
-            new VirtualElement(childOptions, { name: "child" + state.number }, [], "childComp"),
+            new VirtualElement(childOptions, {
+                name: "child" + state.number,
+                onChildMounted(msg: string) {
+                    console.log('onChildMounted', msg);
+                    state.number = 50
+                }
+            }, [], "childComp"),
             ...(!state.isActive ?
                 ["1", "3", "4", "2"] : ["5", "1", "2", "4"]
             ).map(item => new VirtualElement("li", {}, item + " " + state.number, item))
-        ],
-            "wrapper")
+        ], "wrapper")
     }
 }
 // 创建组件虚拟节点
