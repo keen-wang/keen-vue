@@ -1,8 +1,11 @@
 import { VirtualElement } from '../renderer/virtualElement'
+
+type RenderFunc = () => VirtualElement
+
 export interface ComponentOptions {
     name?: string;
-    render: () => VirtualElement,
-    data: Function;
+    render?: RenderFunc,
+    data?: Function;
     // 参数
     props?: any;
     // 生命周期函数
@@ -12,6 +15,8 @@ export interface ComponentOptions {
     mounted?: Function;
     beforeUpdate?: Function;
     updated?: Function;
+    // setup 函数用于调用组合 API
+    setup?: (props: any, setupContext: any) => RenderFunc | any
 }
 export class VComponent {
     isMounted: boolean = false

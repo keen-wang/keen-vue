@@ -1,4 +1,4 @@
-import { createRenderer, ref, VirtualElement } from '../src'
+import { createRenderer, VirtualElement } from '../src'
 import { ComponentOptions } from '../src/component/component'
 // 子组件选项
 const childOptions: ComponentOptions = {
@@ -8,11 +8,9 @@ const childOptions: ComponentOptions = {
     data() {
         return {}
     },
-    setup: (props, context) => {
-        return () => {
-            const state = this as any
-            return new VirtualElement("li", {}, props.name, "child")
-        }
+    render() {
+        const state = this as any
+        return new VirtualElement("li", {}, state.name, "child")
     }
 }
 // 组件选项
@@ -21,15 +19,12 @@ const componentOptions: ComponentOptions = {
     data() {
         return {
             title: "hello world",
-            isActive: false
+            isActive: false,
+            number: 0
         }
     },
     props: {
         title: String
-    },
-    setup() {
-        const number = ref(0)
-        return { number }
     },
     render() {
         const state = this as any

@@ -3,6 +3,8 @@ import { reactive, shallowReactive } from "../reactive";
 import { VirtualElement, VText, VComment, VFragment } from "./virtualElement";
 import { getQueueJob } from './queueJob'
 import { VComponent, ComponentOptions } from "../component/component";
+import { shallowReadonly } from "../readonly";
+import { proxyRefs } from "../ref";
 const queueJob = getQueueJob()
 interface OperationOptions {
     createElement: (tag: string) => Element,
@@ -279,16 +281,34 @@ export function createRenderer(options: OperationOptions = browserOptions) {
         if (typeof vnode.type !== "object") throw "type error"
         const componentOptions = vnode.type
         // 获取render函数
-        const { render, data, props: propsOption, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions as ComponentOptions
+        let { render } = componentOptions as ComponentOptions
+        const { setup, data, props: propsOption,
+            beforeCreate, created, beforeMount, mounted, beforeUpdate, updated
+        } = componentOptions as ComponentOptions
 
         beforeCreate && beforeCreate()
 
         // data 中返回的数据处理为响应式数据
-        const state = reactive(data())
+        const state = data ? reactive(data()) : null
         // 获取 props 和 attrs 
         const { props, attrs } = resolveProps(propsOption, vnode.props)
         // 创建组件实例
         const instance = new VComponent(state, shallowReactive(props))
+
+        // 创建 setupContext
+        const setupContext: any = { attrs } // TODO: emit 和 slots 后续补充
+        const setupResult = setup && setup(shallowReadonly(instance.props), setupContext)
+        let setupState: any = null // setup返回响应式数据
+        if (typeof setupResult === "function") {
+            if (render) console.warn("render is ignored")
+            render = setupResult
+        } else {
+            setupState = proxyRefs(setupResult)
+        }
+
+        // 将实例挂在vnode,便于后续更新
+        vnode.component = instance
+
         // 创建组件上下文对象, 代理组件实例
         const renderContext = new Proxy(instance, {
             get(target, key, receiver) {
@@ -297,6 +317,11 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                     return state[key]
                 } else if (key in props) {
                     return props[key]
+                } else if (setupState && key in setupState) {
+                    // 组件上下文支持获取setupState
+                    return setupState[key]
+                } else if (setupContext && key in setupContext) {
+                    return setupContext[key]
                 } else {
                     // TODO: 从methods、computed内取
                     console.error(`key ${key.toString()} not exist`)
@@ -309,6 +334,9 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 } else if (key in props) {
                     console.warn(`props ${key.toString()}  changed`)
                     props[key] = value
+                } else if (setupState && key in setupState) {
+                    // 组件上下文支持获取setupState
+                    setupState[key] = value
                 } else {
                     // TODO: 从methods、computed内取
                     console.error(`key ${key.toString()} not exist`)
@@ -316,12 +344,11 @@ export function createRenderer(options: OperationOptions = browserOptions) {
                 return true
             }
         })
-        vnode.component = instance // 将实例挂在vnode,便于后续更新
-
         created && created.call(renderContext)
 
         // 注册副作用函数，当响应式数据变化时更新组件
         registerEffect(() => {
+            if (!render) return console.error("[render] render is not exist")
             // 执行函数获取最新虚拟DOM，将render的this指向state
             const subTree = render.call(renderContext)
             // 判断组件是否挂载
